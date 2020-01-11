@@ -76,7 +76,6 @@ class FileSorter:
 
 if __name__ == "__main__" :
     fs = FileSorter()
-
     directory = "filetest"
 
     folder_dict = {
