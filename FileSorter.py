@@ -17,27 +17,35 @@ TO DO:
 
 
 class FileSorter:
+
+    def __init__(self):
+        pass
+
     @staticmethod
-    def generate_foldernames(directory):
-        foldernames = []
+    def fdnames_of_dir(directory):
+        fdnames = []
         for entry in os.scandir(directory):
-            if entry.is_folder():
-                foldernames.append(entry.name)
+            if not entry.is_file():
+                fdnames.append(entry.name)
 
-        return foldernames
+        return fdnames
 
     @staticmethod
-    def generate_filetypes(directory):
-        filetypes = []
+    def ftypes_of_dir(directory):
+        ftypes = []
         for entry in os.scandir(directory):
             if entry.is_file():
-                filetypes.append('.' + str(entry).split(".")[-1][:-2])
-        return filetypes
+                filetype = str(entry.name).split(".")[-1]
+                if filetype == entry.name:
+                    break
+
+                ftypes.append('.' + filetype)
+        return ftypes
 
     @staticmethod
-    def generate_folders(foldernames, directory):
-        for foldername in foldernames:
-            new_folder_dir = os.path.join(directory, foldername)
+    def gen_fd(fdnames, directory):
+        for fdname in fdnames:
+            new_folder_dir = os.path.join(directory, fdname)
             try:
                 os.mkdir(new_folder_dir)
                 print("Creating : " + new_folder_dir)
@@ -54,40 +62,52 @@ class FileSorter:
                 if not os.path.isdir(actual_destination):
                     os.mkdir(actual_destination)
 
-                shutil.move(file_origin, actual_destination)
+                try:
+                    shutil.move(file_origin, actual_destination)
+                except shutil.Error:
+                    shutil.move(file_origin, actual_destination + "copy")
+
                 print("Moving : " + file_origin + " To : " + actual_destination)
 
+    def gen_dict_from_dir(self, directory):
+        ftypes = set(self.ftypes_of_dir(directory))
 
-    def generate_dict(self, directory):
-        filetypes = set(self.generate_filetypes(directory))
-        parent_dir = os.path.dirname(directory)
+        return {directory: ftypes}
 
-        return {parent_dir, filetypes}
-
-    @staticmethod
-    def combine_dicts(dictionaries):
-        new_dict = {}
-        for dictionary in dictionaries:
-            for key, value in dictionary.items():
-                new_dict.setdefault(key, []).append(value)
-
-        return new_dict
+    def gen_dict_from_folderlist(self, directory_list):
+        for directory in directory_list:
+            yield self.gen_dict_from_dir(directory)
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     fs = FileSorter()
-    directory = "filetest"
+    directory = "."
 
-    folder_dict = {
-        "Compressed": [".iso", ".zip", ".7z", ".jar", ".rar"],
-        "Video": [".mkv", ".mp4", ".wav"],
-        "Document": [".psd", ".doc", ".py", ".docx", ".epub", ".pdf", ".xd"],
-        "Audio": [".m4b"],
-        "Executable": [".exe", ".msi"],
-        "Misc": [".torrent", ".apk", ".jpeg", ".lbr", ".part", ".w3x", ".scr", ".aria2", ".log", ".swf"],
-        "Image": [".png"]
-    }
+    folders = ["Compressed",
+               "Video",
+               "Document",
+               "Audio",
+               "Executable",
+               "Misc",
+               "Image"
+               ]
 
+    folder_dict = {}
+
+    for dict in fs.gen_dict_from_folderlist(folders):
+        folder_dict.update(dict)
+
+    # folder_dict = {
+    #     "Compressed": [".iso", ".zip", ".7z", ".jar", ".rar", ".tar", ".tgz"],
+    #     "Video": [".mkv", ".mp4", ".wav"],
+    #     "Document": [".psd", ".doc", ".docx", ".epub", ".pdf", ".xd", ".pptx"],
+    #     "Audio": [".m4b"],
+    #     "Executable": [".exe", ".msi"],
+    #     "Misc": [".torrent", ".apk", ".jpeg", ".lbr", ".part", ".w3x", ".scr", ".aria2", ".log", ".swf"],
+    #     "Image": [".png", ".jpg"]
+    # }
+
+    # print(folder_dict)
     for classification, identifiers in folder_dict.items():
         for identifier in identifiers:
             fs.mass_move(directory, identifier, classification)
